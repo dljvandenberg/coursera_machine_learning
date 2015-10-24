@@ -33,20 +33,53 @@
 </div>
 
 
-<div id="instructions" class="section level2">
-<h2>Instructions</h2>
-<p>The goal of your project is to predict the manner in which they did the exercise. This is the “classe” variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.</p>
-<ol style="list-style-type: decimal">
-<li>Your submission should consist of a link to a Github repo with your R markdown and compiled HTML file describing your analysis. Please constrain the text of the writeup to &lt; 2000 words and the number of figures to be less than 5. It will make it easier for the graders if you submit a repo with a gh-pages branch so the HTML page can be viewed online (and you always want to make it easy on graders :-).</li>
-<li>You should also apply your machine learning algorithm to the 20 test cases available in the test data above. Please submit your predictions in appropriate format to the programming assignment for automated grading. See the programming assignment for additional details.</li>
-</ol>
+<div id="introduction" class="section level2">
+<h2>Introduction</h2>
+<!-- TODO: background, goal -->
+</div>
+<div id="exploratory-data-analysis" class="section level2">
+<h2>Exploratory Data Analysis</h2>
+<!-- TODO: data description -->
+<!-- TODO: cleaning data? -->
+<!-- TODO: plots -->
+</div>
+<div id="model-building" class="section level2">
+<h2>Model Building</h2>
+<!-- TODO: method -->
+<!-- TODO: cross validation -->
+<!-- TODO: expected out-of-sample error -->
+<!-- TODO: choices -->
+</div>
+<div id="test-case-results" class="section level2">
+<h2>Test Case Results</h2>
+<!-- TODO: apply model to testing data set -->
 </div>
 <div id="data-source" class="section level2">
-<h2>Data source</h2>
-<p><a href="http://groupware.les.inf.puc-rio.br/har" class="uri">http://groupware.les.inf.puc-rio.br/har</a></p>
+<h2>Data Source</h2>
+<p>We used the following data set: <a href="http://groupware.les.inf.puc-rio.br/har" class="uri">http://groupware.les.inf.puc-rio.br/har</a></p>
 <ul>
 <li>Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. <a href="http://groupware.les.inf.puc-rio.br/work.jsf?p1=11201">Qualitative Activity Recognition of Weight Lifting Exercises</a>. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human ’13) . Stuttgart, Germany: ACM SIGCHI, 2013.</li>
 </ul>
+</div>
+<div id="background" class="section level2">
+<h2>Background</h2>
+<p>Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it.</p>
+<p>In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: <a href="http://groupware.les.inf.puc-rio.br/har" class="uri">http://groupware.les.inf.puc-rio.br/har</a> (see the section on the Weight Lifting Exercise Dataset).</p>
+</div>
+<div id="instructions" class="section level2">
+<h2>Instructions</h2>
+<p>The goal of your project is to predict the manner in which they did the exercise. This is the “classe” variable in the training set. You may use any of the other variables to predict with. You should create a report describing:</p>
+<ul>
+<li>how you built your model,</li>
+<li>how you used cross validation,</li>
+<li>what you think the expected out of sample error is,</li>
+<li>and why you made the choices you did.</li>
+<li>You will also use your prediction model to predict 20 different test cases.</li>
+</ul>
+<ol style="list-style-type: decimal">
+<li>Your submission should consist of a link to a Github repo with your R markdown and compiled HTML file describing your analysis. Please constrain the text of the writeup to &lt; 2000 words and the number of figures to be less than 5.</li>
+<li>You should also apply your machine learning algorithm to the 20 test cases available in the test data above. See the programming assignment for additional details.</li>
+</ol>
 <!-- Useful info
 
 ## Figures
@@ -67,8 +100,6 @@ You can enable figure captions by `fig_caption: yes` in YAML:
 
 Then you can use the chunk option `fig.cap = "Your figure caption."` in **knitr**.
 
-## More Examples
-
 You can write math expressions, e.g. $Y = X\beta + \epsilon$, footnotes^[A footnote here.], and tables, e.g. using `knitr::kable()`.
 
 
@@ -84,11 +115,6 @@ Duster 360           14.3     8   360.0   245   3.21   3.570   15.84    0    0  
 Merc 240D            24.4     4   146.7    62   3.69   3.190   20.00    1    0      4      2
 Merc 230             22.8     4   140.8    95   3.92   3.150   22.90    1    0      4      2
 Merc 280             19.2     6   167.6   123   3.92   3.440   18.30    1    0      4      4
-
-Quote using `>`:
-
-> "He who gives up [code] safety for [code] speed deserves neither."
-([via](https://twitter.com/hadleywickham/status/504368538874703872))
 
 -->
 </div>
