@@ -10,82 +10,275 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-## Introduction
+# Introduction
 
-<!-- TODO: background, goal -->
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it.
 
-
-## Exploratory Data Analysis
-
-<!-- TODO: data description -->
-<!-- TODO: cleaning data -->
-<!-- TODO: plots -->
+In this project, we used data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. We constructed and applied a Machine Learning algorithm that aims to predict activity quality based on the accelerometer data.
 
 
-## Model Building
+# Exploratory Data Analysis
 
-<!-- TODO: method -->
-<!-- TODO: cross validation -->
-<!-- TODO: expected out-of-sample error -->
-<!-- TODO: choices -->
+## Raw data
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Variables
+set.seed(1234)
+dir.work <- "~/git/practical_machine_learning/prediction_assignment/data"
+file.train <- "pml-training.csv"
+file.predict <- "pml-testing.csv"
+p.training <- 0.1
+
+# Libraries
+library(caret)
+library(ggplot2)
+
+# Load data
+setwd(dir.work)
+df.train.file <- read.csv(file.train, na.strings=c("","#DIV/0!","NA"))
+df.predict.file <- read.csv(file.predict, na.strings=c("","#DIV/0!","NA"))
+
+# Divide into training, testing and predicting set
+m.train <- createDataPartition(df.train.file$classe, p=p.training, list = FALSE)
+df.training <- df.train.file[m.train,]
+df.testing <- df.train.file[-m.train,]
+df.predicting <- df.predict.file
+```
+
+The input data set consists of 19622 measurements of 160 variables and the data set to use for prediction has 20 measurements. The outcome variable that we want to predict is `classe`, a factor variable with 5 different levels: A, B, C, D, E, denoting the quality of the exercise performed. Both data sets contain time series measurements with time variables `raw_timestamp_part_1`, `raw_timestamp_part_2`, `cvtd_timestamp` and measured in time windows denoted by `num_window`. At the end of each window aggregate data is calculated (denoted by `new_window=yes`) and was incorporated into the same dataset. Measurements have been done for 6 persons (variable: user_name).
+
+This data was split into a training set, testing set and predicting set. Due to computation time constraints we decided to choose a smaller size for the training set (p=0.1), which eventually led to very good results.
+
+The following example plots give an idea of some of the data:
+```{r, fig.show='hold'}
+qplot(num_window, pitch_belt, data=df.training, colour=classe, pch=user_name)
+qplot(accel_forearm_x, accel_forearm_z, data=df.training, colour=classe, pch=user_name)
+```
 
 
-## Test Case Results
+## Data Cleaning
 
-<!-- TODO: apply model to testing data set -->
+The data sets were cleaned up by removing variables that are correlated to classe due to experiment setup (such as `user_name`, timestamps and window number). We also decided to use only non-aggregate data (`new_window=="no"`). Furthermore we removed columns with only NA values.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Remove variables from training dataset that are correlated to classe due to experiment setup
+# Furthermore, only use non-aggregated data (new_window=="no")
+df.training <- subset(df.training, new_window=="no", select=-c(X, user_name, raw_timestamp_part_1, raw_timestamp_part_2, cvtd_timestamp, new_window, num_window))
+df.testing <- subset(df.testing, new_window=="no", select=-c(X, user_name, raw_timestamp_part_1, raw_timestamp_part_2, cvtd_timestamp, new_window, num_window))
+
+# Remove columns with only NA values
+df.training <- df.training[,colSums(is.na(df.training))<nrow(df.training)]
+df.testing <- df.testing[,colSums(is.na(df.testing))<nrow(df.testing)]
+```
+
+This resulted in a more compact training set with 1934 measurements of 53 variables and a large testing set with 17282 such measurements of 53 variables, to be used for validation.
 
 
-## Data Source
 
-We used the following data set: http://groupware.les.inf.puc-rio.br/har
+# Model Building
+
+## Random Forest
+
+We first used a simple tree model (method="rpart"), which gave very poor results (accuracy=0.5). A boosting model (method="gbm") gave a memory allocation error, which led us to a random forest model as an alternative. To speed up results we used the `prox=FALSE` option during the train process, as well as a relatively small training set as mentioned earlier.
+
+```{r, eval=FALSE, echo=TRUE, warning=FALSE, message=FALSE}
+model.rf.2 <- train(factor(classe) ~ ., data=df.training, method="rf", prox = FALSE)
+```
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+setwd(dir.work)
+model.rf.2 <- readRDS("model_rf.rds")
+```
+
+
+# Results
+
+## Accuracy
+
+We find an accuracy of 99.3% on the training set (in-sample error 0.7%). Cross validating our model on the test set we find a 94.4% accuracy (out-of-sample error 5.6%).
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Set selected model
+model.best <- model.rf.2
+
+# Confusion table and accuracy for training set
+list.training.results <- predict(model.best, newdata=df.training)
+table(df.training$classe, list.training.results)
+sum(df.training$classe == list.training.results) / length(df.training$classe)
+
+# Confusion table and accuracy for testing set
+list.testing.results <- predict(model.best, newdata=df.testing)
+table(df.testing$classe, list.testing.results)
+sum(df.testing$classe == list.testing.results) / length(df.testing$classe)
+
+# Most important variables
+varImp(model.best)
+```
+
+According to this model the most important variables affecting the outcome are: roll_belt, pitch_forearm, yaw_belt and magnet_dumbbell_z. Plotting some of these shows patterns that help explain their relevance for determining the outcome variable `classe`:
+
+```{r, fig.show='hold'}
+qplot(roll_belt, pitch_forearm, data=df.training, colour=classe)
+qplot(pitch_forearm, yaw_belt, data=df.training, colour=classe)
+```
+
+
+# Test Case Results
+
+Applying the model we just trained to 20 different test cases with unknown `classe`, we find:
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+predict(model.best, df.predicting)
+```
+
+We expect an accuracy of 94.4% here. It is therefor likely that ~1 of these 20 cases has been predicted incorrectly.
+
+
+# Discussion
+
+We made the following choices in our analysis:
+
+- Small training set (p=0.1), mainly to speed up the training process.
+- Removed aggregated results from data set and only focus on single measurements. This also simplified the number of variables in the input data set.
+- Removed variables that are correlated to the outcome variable due to experiment setup.
+- Since this is a classification problem with a lot of non-linearity in the data we chose a random forest model. This gave clearly better results than a simple tree model. A boosting model would have been a potential alternative but required more memory space than we had available.
+- To speed up results we used the `prox=FALSE` option during the train process.
+- Cross validation was done on a fairly large testing set, also due to the fact that we chose our training set to be small. This gives us confidence in our estimate of the model accuracy.
+
+Overall these choices gave us a very satisfactory accuracy.
+
+
+# Data Source
+
+We used the Weight Lifting Exercises Dataset available at http://groupware.les.inf.puc-rio.br/har provided by:
 
 - Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. [Qualitative Activity Recognition of Weight Lifting Exercises](http://groupware.les.inf.puc-rio.br/work.jsf?p1=11201). Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
 
 
 
-## Background
+# Appendix A: R Code
 
-Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it.
+```{r echo=TRUE, eval=FALSE}
+### Practical Machine Learning - Prediction assignment R code
 
-In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+## Preparations
+
+# Variables
+set.seed(1234)
+dir.work <- "~/git/practical_machine_learning/prediction_assignment/data"
+file.train <- "pml-training.csv"
+file.predict <- "pml-testing.csv"
+# Set p small to speed up training process (with risk of lower accuracy)
+p.training <- 0.1
+
+# Libraries
+library(caret)
+library(ggplot2)
+
+# Load data
+setwd(dir.work)
+df.train.file <- read.csv(file.train, na.strings=c("","#DIV/0!","NA"))
+df.predict.file <- read.csv(file.predict, na.strings=c("","#DIV/0!","NA"))
+
+# Divide into training, testing and predicting set
+m.train <- createDataPartition(df.train.file$classe, p=p.training, list = FALSE)
+df.training <- df.train.file[m.train,]
+df.testing <- df.train.file[-m.train,]
+df.predicting <- df.predict.file
 
 
-## Instructions
+## Exploring raw data sets
 
-The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing:
+# Check data sets
+dim(df.training)
+dim(df.testing)
+names(df.training)
+head(df.training)
+lapply(df.training, class)
+lapply(df.testing, class)
 
-- how you built your model,
-- how you used cross validation,
-- what you think the expected out of sample error is,
-- and why you made the choices you did.
-- You will also use your prediction model to predict 20 different test cases. 
-
-1. Your submission should consist of a link to a Github repo with your R markdown and compiled HTML file describing your analysis. Please constrain the text of the writeup to < 2000 words and the number of figures to be less than 5.
-2. You should also apply your machine learning algorithm to the 20 test cases available in the test data above. See the programming assignment for additional details. 
+# Some plots based on training
+qplot(num_window, pitch_belt, data=df.training, colour=classe, pch=user_name)
+qplot(accel_forearm_x, accel_forearm_z, data=df.training, colour=classe, pch=user_name)
 
 
+## Data Cleaning
 
-<!-- Useful info
+# Remove variables from training dataset that are correlated to classe due to experiment setup
+# Furthermore, only use non-aggregated data (new_window=="no")
+df.training <- subset(df.training, new_window=="no", select=-c(X, user_name, raw_timestamp_part_1, raw_timestamp_part_2, cvtd_timestamp, new_window, num_window))
+df.testing <- subset(df.testing, new_window=="no", select=-c(X, user_name, raw_timestamp_part_1, raw_timestamp_part_2, cvtd_timestamp, new_window, num_window))
 
-## Figures
+# Remove columns with only NA values
+df.training <- df.training[,colSums(is.na(df.training))<nrow(df.training)]
+df.testing <- df.testing[,colSums(is.na(df.testing))<nrow(df.testing)]
 
-```{r, fig.show='hold'}
-plot(1:10)
-plot(10:1)
+
+## Model 1: rpart
+
+# rpart model gave poor results (accuracy=0.5), not used anymore
+#model.rpart <- train(factor(classe) ~ ., method="rpart", data=df.training)
+
+
+## Model 2: gbm
+
+# gbm model gave memory allocation error, not used for now
+#model.gbm <- train(factor(classe) ~ ., method="gbm", data=df.training)
+
+
+## Model 3: rf
+
+# Train model
+#model.rf.1 <- train(factor(classe) ~ ., data=df.training, method="rf")
+model.rf.2 <- train(factor(classe) ~ ., data=df.training, method="rf", prox = FALSE)
+#model.rf.3 <- train(factor(classe) ~ ., data=df.training, method="rf", trControl=trainControl(method="cv", number=5), prox=TRUE, allowParallel=TRUE)
+
+
+## Investigate model
+
+# Set selected model and display
+model.best <- model.rf.2
+model.best
+model.best$finalModel
+
+# Confusion table and accuracy for training set
+list.training.results <- predict(model.best, newdata=df.training)
+table(df.training$classe, list.training.results)
+sum(df.training$classe == list.training.results) / length(df.training$classe)
+
+# Confusion table and accuracy for testing set
+list.testing.results <- predict(model.best, newdata=df.testing)
+table(df.testing$classe, list.testing.results)
+sum(df.testing$classe == list.testing.results) / length(df.testing$classe)
+
+# Most important variables
+varImp(model.best)
+
+# Save/load model to/from file
+saveRDS(model.best, "model_rf.rds")
+# model <- readRDS("model_rf.rds")
+
+
+## Making results more insightful
+
+# Plot a few important variables
+qplot(roll_belt, pitch_forearm, data=df.training, colour=classe)
+qplot(roll_belt, yaw_belt, data=df.training, colour=classe)
+qplot(pitch_forearm, yaw_belt, data=df.training, colour=classe)
+
+
+## Predict
+
+# Apply best model to predicting set
+list.predicting.results <- predict(model.best, df.predicting)
+list.predicting.results
+
+# Write to files
+pml_write_files = function(x){
+    n = length(x)
+    for(i in 1:n){
+        filename = paste0("problem_id_",i,".txt")
+        write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+    }
+}
+pml_write_files(list.predicting.results)
 ```
-
-You can enable figure captions by `fig_caption: yes` in YAML:
-
-    output:
-      rmarkdown::html_vignette:
-        fig_caption: yes
-
-Then you can use the chunk option `fig.cap = "Your figure caption."` in **knitr**.
-
-You can write math expressions, e.g. $Y = X\beta + \epsilon$, footnotes^[A footnote here.], and tables, e.g. using `knitr::kable()`.
-
-```{r, echo=FALSE, results='asis'}
-knitr::kable(head(mtcars, 10))
-```
-
--->
